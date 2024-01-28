@@ -13,7 +13,7 @@ def clean_file(file):
     with open(file, "r", encoding='utf-8') as f:
         #reemplaza con 1 espacio:
 
-        #caracteres no alfanumericos
+        #caracteres no alfanumericos ni numeros
         text = re.sub(r'[^a-zA-Z\s]', ' ', f.read())
         #tabs
         text = re.sub(r'\t', ' ', text)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     
     filePath = "ficheros/LittleWomenShortVersion.txt"
     chunksPath = 'ficheros/chunks'
-    CleanFilePath = "ficheros/newLittleWomen.txt"
+    cleanFilePath = "ficheros/newLittleWomen.txt"
     numChunks = 20
     clean_file(filePath)
 
@@ -60,8 +60,8 @@ if __name__ == "__main__":
     stateCoordinator = input("Inducir un error al nodo coordinador? S/N: ").upper()
 
     if stateCoordinator == 'N':
-        print(f'DIVISION DE FICHERO: {CleanFilePath} EN CHUNKS')
-        split_file(CleanFilePath,chunksPath, numChunks)
+        print(f'DIVISION DE FICHERO: {cleanFilePath} EN CHUNKS')
+        split_file(cleanFilePath,chunksPath, numChunks)
         print("Chunks Creados")
 
     #paso 3 Creacion de las instancias de map con los fragmentos que van a utilizar

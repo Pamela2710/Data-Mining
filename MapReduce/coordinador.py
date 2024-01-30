@@ -1,24 +1,22 @@
 
-#permite trabajar con expresiones regulares estas son patrones de búsqueda que 
+#permite trabajar con expresiones regulares estas son patrones de bÃºsqueda que 
 #se utilizan para encontrar coincidencias dentro de cadenas de texto
 import re
 
 #proporciona funciones para interactuar con el sistema operativo, 
-#manipulación de archivos y directorios, obtener información sobre el SO
+#manipulaciÃ³n de archivos y directorios, obtener informaciÃ³n sobre el SO
 import os 
 
 
 import multiprocessing
-from concurrent.futures import ThreadPoolExecutor
 
 
-import multiprocessing
-from pathlib import Path
 import random
-from threading import Thread, current_thread
+import threading 
+from threading import current_thread
 import time
 
-from map import map_execution
+#from map import map_execution
 
 nodes_cores = multiprocessing.cpu_count()
 print(f"CORES -> {nodes_cores} \t")
@@ -64,6 +62,67 @@ def split_file(clean_file, chunks_folder, num_chunks):
 
             chunk_number += 1
 
+#Funcion Map
+def map_execution(list_chunk_name,lock,error):
+    #Sacar el nombre del hilo que se esta ejecutando
+    id = current_thread().name
+    
+    if error==True:
+            print(f"Reiniciando Hilo {id} Dañado")
+            time.sleep(15)
+            print(f"Hilo {id} Reparado, Iniciando Procesos")
+    chunk_name=""
+    while len(list_chunk_name)>0:
+        
+        with lock:
+            chunk_name=list_chunk_name.pop(0)
+        
+        
+        #Inicia Proceso
+        print(f"MAP Nodo {id} inicio el proceso del Chunk: {chunk_name}")
+        
+        #Lectura del archivo chunk
+        with open(f"ficheros/chunks/{chunk_name}", "r", encoding='utf-8') as reader:
+            words = reader.read().split(" ")
+            
+            #Escritura del mapeado del archivo chunk
+            for word in words:
+                with open(f"ficheros/mapped_chunks/mapped_{chunk_name}", "a+", encoding='utf-8') as writer:
+                    writer.write(f"<{word}, 1>\n")
+        #Finaliza Proceso
+        print(f"MAP Nodo {id} finalizo su proceso de: {chunk_name}")
+
+    return None
+
+def ejecutar_hilos(lista, ErrorNodoMap):
+    id = current_thread().name
+    print(f"Nodo Paralelo {id} inicio")
+    #list_size = len(lista)
+    
+    # Crear un lock para sincronizar el acceso a la lista
+    lock = threading.Lock()
+    if (ErrorNodoMap==False):
+        print(f"Creacion Nodos en {id}")
+        hilo1 = threading.Thread(target=map_execution, args=(lista,lock,False))
+        hilo2 = threading.Thread(target=map_execution, args=(lista,lock,False))
+    
+        hilo1.start()
+        hilo2.start()
+    
+        hilo1.join()
+        hilo2.join()
+    else:
+        print(f"Creacion Nodos en {id}")
+        hilo1 = threading.Thread(target=map_execution, args=(lista,lock,True))
+        hilo2 = threading.Thread(target=map_execution, args=(lista,lock,False))
+        print(f"Detener Hilo 1 en {id}")
+        hilo1.start()
+        hilo2.start()
+        
+        hilo1.join()
+        hilo2.join()
+        
+    print(f"Nodo Paralelo {id} Finalizo, Esperando a los demas")
 
 
 if __name__ == "__main__":
@@ -95,38 +154,41 @@ if __name__ == "__main__":
         #lectura de archivos chunks dentro de la carpeta ficheros
         chunks_list = os.listdir("ficheros/chunks")
         chunks_list_size = len(chunks_list)
-        print(f"Chunks que entran en el Map -> {chunks_list_size} \t")
+        #print(f"Lista Chunks que entran en el Map -> {chunks_list} \t")
+
         
         if state_map == 'S':
+            #Elegir al azar el nodo a parar
+            map_random = random.randint(0, nodes_map)
+            
             #Bandera de parar nodo
-            error_map = True
-            #Elejir al azar el nodo a parar
+            if map_random<=1:
+                print(f"El Error ocurrira en el hilo de grupo 1  \t")
+                error_map1 = True
+                error_map2 = False
+            else:
+                print(f"El Error ocurrira en el hilo de grupo 2  \t")
+                error_map1 = False
+                error_map2 = True
+            #Elegir al azar el nodo a parar
             map_random = random.randint(0, nodes_map)
         else:
-            error_map = False
+            error_map1 = False
+            error_map2 = False
         
+        print(f"Inicio Paralelismo \t")
         #Inicio Nodos Map
-        with ThreadPoolExecutor(max_workers=nodes_map) as executor:
-            cnt = 0
-            
-            
-            for chunk in chunks_list:
-                
-                #Caso de Bandera parar nodo True
-                if error_map and cnt==map_random:
-                    print(f"Error nodo map {current_thread().name} \t")
-                    executor.submit(map_execution, chunk)
-                    cnt = cnt + 1
-                    continue
-                #Inicio Proceso Map
-                executor.submit(map_execution, chunk)
-                cnt = cnt + 1
-
-            
-
-        print("ALL MAP NODES HAVE FINISHED MAPPING THEIR ASSIGNED CHUNKS")
+        hilo_grupo1 = threading.Thread(target=ejecutar_hilos, args=(chunks_list[(int(chunks_list_size/2)):],error_map1))
+        hilo_grupo2 = threading.Thread(target=ejecutar_hilos, args=(chunks_list[:(int(chunks_list_size/2))],error_map2))
         
-        executor.shutdown()
+        hilo_grupo1.start()
+        hilo_grupo2.start()
+        
+        hilo_grupo1.join()
+        hilo_grupo2.join()
+        
+        print("Todos los hilos han finalizado.")
+        
         
 
     

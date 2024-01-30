@@ -2,7 +2,7 @@ from threading import current_thread
 import time
 
 #Funcion Map
-def map_execution(list_chunk_name,lock,error):
+def map_execution(List_map_chunks,list_chunk_name,lock,error):
     #Sacar el nombre del hilo que se esta ejecutando
     id = current_thread().name
     
@@ -15,8 +15,9 @@ def map_execution(list_chunk_name,lock,error):
         
         with lock:
             chunk_name=list_chunk_name.pop(0)
+            List_map_chunks.append("mapped_"+chunk_name)
         
-        
+    
         #Inicia Proceso
         print(f"MAP Nodo {id} inicio el proceso del Chunk: {chunk_name}")
         
@@ -31,5 +32,5 @@ def map_execution(list_chunk_name,lock,error):
         #Finaliza Proceso
         print(f"MAP Nodo {id} finalizo su proceso de: {chunk_name}")
 
-    return None
+    return List_map_chunks
 

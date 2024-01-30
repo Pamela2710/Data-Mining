@@ -1,31 +1,18 @@
 
-#permite trabajar con expresiones regulares estas son patrones de bÃºsqueda que 
-#se utilizan para encontrar coincidencias dentro de cadenas de texto
-import re
-
-#proporciona funciones para interactuar con el sistema operativo, 
-#manipulaciÃ³n de archivos y directorios, obtener informaciÃ³n sobre el SO
-import os 
-
-
-
-
-
-import random
+import re #se utilizan para encontrar coincidencias dentro de cadenas de texto
+import os #proporciona funciones para interactuar con el sistema operativo
+import random, time
 import threading 
 from threading import current_thread
-
-
 from map import map_execution
-from combiner_reducer import combiner
-from combiner_reducer import reducer
-
-
+from combiner_reducer import combiner, reducer
 
 nodes_map = 4
+nodes_combiner = 2
 nodes_reducer = 2
 
 print(f"MAP cores -> {nodes_map} \t"
+      f"COMBINER cores -> {nodes_combiner} \t"
       f"REDUCER cores -> {nodes_reducer} \t")
 
 #Funcion para limpiar los caracteres del texto
@@ -64,78 +51,78 @@ def split_file(clean_file, chunks_folder, num_chunks):
 
             chunk_number += 1
 
-
-
-def ejecutar_hilos(lista, ErrorNodoMap,ErrorNodoCombiner,ErrorNodoReducer,nombre):
-    List_map_chunks=[]
-    List_comb_chunks=[]
-    id = current_thread().name
+def ejecutar_hilos(lista, error_nodo_map, error_nodo_combiner, error_nodo_reducer, nombre):
+    list_map_chunks=[]
+    list_comb_chunks=[]
     print(f"{nombre} inicio")
-    #list_size = len(lista)
     
     # Crear un lock para sincronizar el acceso a la lista
     lock = threading.Lock()
-    if (ErrorNodoMap==False):
+    if (error_nodo_map==False):
         print(f"Creacion Nodos en {nombre}")
-        hilo1 = threading.Thread(target=map_execution, args=(List_map_chunks,lista,lock,False))
-        hilo2 = threading.Thread(target=map_execution, args=(List_map_chunks,lista,lock,False))
-    
+
+        hilo1 = threading.Thread(target=map_execution, args=(list_map_chunks,lista,lock,False))
+        hilo2 = threading.Thread(target=map_execution, args=(list_map_chunks,lista,lock,False))
+   
         hilo1.start()
         hilo2.start()
     
         hilo1.join()
         hilo2.join()
+
     else:
         print(f"Creacion Nodos en {nombre}")
-        hilo1 = threading.Thread(target=map_execution, args=(List_map_chunks,lista,lock,True))
-        hilo2 = threading.Thread(target=map_execution, args=(List_map_chunks,lista,lock,False))
+        hilo1 = threading.Thread(target=map_execution, args=(list_map_chunks,lista,lock,True))
+        hilo2 = threading.Thread(target=map_execution, args=(list_map_chunks,lista,lock,False))
         print(f"Detener Hilo 1 en {nombre}")
+
         hilo1.start()
         hilo2.start()
         
-    
-        
         hilo1.join()
         hilo2.join()
+
         
     print(f"Inicio de Combiner en {nombre}")
     #Inicio de Combiner
-    if (ErrorNodoCombiner==False):
-        #crear hilo conbiner
+    if (error_nodo_combiner==False):
+        #crear hilo combiner
         print(f"Creacion Nodos Combiner en {nombre}")
-        hilo3 = threading.Thread(target=combiner, args=(List_comb_chunks,List_map_chunks,lock,False))
+
+        hilo3 = threading.Thread(target=combiner, args=(list_comb_chunks,list_map_chunks,lock,False))
         
         hilo3.start()
-        
         hilo3.join()
+
     else:
-        #crear hilo conbiner
+        #crear hilo combiner
         print(f"Creacion Nodos Combiner en {nombre}")
-        hilo3 = threading.Thread(target=combiner, args=(List_comb_chunks,List_map_chunks,lock,True))
+        hilo3 = threading.Thread(target=combiner, args=(list_comb_chunks,list_map_chunks,lock,True))
         print(f"Detener Hilo 1 en {nombre}")
+
         hilo3.start()
-        
         hilo3.join()
 
     print(f"Inicio de Reducer en {nombre}")
     #Inicio de Reduce
-    sort("map_output_folder",List_comb_chunks,nombre)
+    sort("map_output_folder",list_comb_chunks,nombre)
     
-    if (ErrorNodoReducer==False):
+    if (error_nodo_reducer==False):
         #crear hilo reduce
         print(f"Creacion Nodos Reducer en {nombre}")
         hilo4 = threading.Thread(target=reducer, args=("sorted_chunk_"+ nombre ,lock,False,"reduced_chunks/reduced_chunks_"+ nombre))
         
         hilo4.start()
-        
         hilo4.join()
+        
+
     else:
         #crear hilo reduce
         print(f"Creacion Nodos Reducer en {nombre}")
         hilo4 = threading.Thread(target=reducer, args=("sorted_chunk_{nombre}",lock,True,"reduced_chunks/reduced_chunks_"+ nombre))
         print(f"Detener Hilo 1 en {nombre}")
+
         hilo4.start()
-        
         hilo4.join()
     
         
@@ -212,42 +199,56 @@ def merge_files(file1_path, file2_path, output_path):
 if __name__ == "__main__":
 
     # paso 1 Limpieza del archivo
-    
+
+    #Para probar con archivo 1GB
+    # filepath = "ficheros/LittleWomen.txt"
+    # numChunls = 10000
+
+    #Para probar con archivo corto
     filePath = "ficheros/LittleWomenShortVersion.txt"
     chunksPath = 'ficheros/chunks'
     cleanFilePath = "ficheros/newLittleWomen.txt"
     numChunks = 20
     clean_file(filePath)
 
-    # Paso 2 Dividir el archivo en chunks mas pequenios
-
+    #Inicio de actividad nodo coordinador
+    #->Inducir error al nodo Coordinador?
     stateCoordinator = input("Inducir un error al nodo coordinador? S/N: ").upper()
+
+    # Paso 2 Dividir el archivo en chunks mas pequenios
 
     if stateCoordinator == 'N':
         print(f'DIVISION DE FICHERO: {cleanFilePath} EN CHUNKS')
         split_file(cleanFilePath,chunksPath, numChunks)
         print("Chunks Creados")
 
-        #paso 3 Creacion de las instancias de map con los fragmentos que van a utilizar
+        # Paso 3 Creacion de las instancias de map 
     
-        print("----- Mapeo -----")
+        print("----- MAPEO -----")
         
-        #Decision Error Nodo Map
+        #->Inducir Error al Nodo Map?
         state_map = input('Inducir un error al nodo map? S/N: ').upper()
         
         #lectura de archivos chunks dentro de la carpeta ficheros
         chunks_list = os.listdir("ficheros/chunks")
         chunks_list_size = len(chunks_list)
+
+        #lectura de archivos map
         for f in os.listdir("ficheros/mapped_chunks"):
             os.remove(os.path.join("ficheros/mapped_chunks", f))
+
+        #lectura de archivos combiner
         for f in os.listdir("ficheros/map_output_folder"):
             os.remove(os.path.join("ficheros/map_output_folder", f))
+
+        #lectura de archivos reduce
         for f in os.listdir("ficheros/reduced_chunks"):
             os.remove(os.path.join("ficheros/reduced_chunks", f))
+
+        #lectura de archivos de ordenamiento
         for f in os.listdir("ficheros/sorted_chunks"):
             os.remove(os.path.join("ficheros/sorted_chunks", f))
-        #print(f"Lista Chunks que entran en el Map -> {chunks_list} \t")
-
+        
         
         if state_map == 'S':
             #Elegir al azar el nodo a parar
@@ -255,11 +256,11 @@ if __name__ == "__main__":
             
             #Bandera de parar nodo
             if map_random<=1:
-                print(f"El Error ocurrira en el hilo de grupo 1  \t")
+                print("El Error ocurrira en el hilo de grupo 1  \t")
                 error_map1 = True
                 error_map2 = False
             else:
-                print(f"El Error ocurrira en el hilo de grupo 2  \t")
+                print("El Error ocurrira en el hilo de grupo 2  \t")
                 error_map1 = False
                 error_map2 = True
 
@@ -267,20 +268,20 @@ if __name__ == "__main__":
             error_map1 = False
             error_map2 = False
         
-        #Decision Error Nodo Combiner
-        state_map = input('Inducir un error al nodo combiner? S/N: ').upper()
+        #-> Inducir Error Nodo Combiner?
+        state_combiner = input('Inducir un error al nodo combiner? S/N: ').upper()
         
-        if state_map == 'S':
+        if state_combiner == 'S':
             #Elegir al azar el nodo a parar
-            map_random = random.randint(0, 1)
+            combiner_random = random.randint(0, nodes_combiner)
             
             #Bandera de parar nodo
-            if map_random==0:
-                print(f"El Error ocurrira en el hilo de grupo 1  \t")
+            if combiner_random==0:
+                print("El Error ocurrira en el hilo de grupo 1  \t")
                 error_comb1 = True
                 error_comb2 = False
             else:
-                print(f"El Error ocurrira en el hilo de grupo 2  \t")
+                print("El Error ocurrira en el hilo de grupo 2  \t")
                 error_comb1 = False
                 error_comb2 = True
 
@@ -288,20 +289,20 @@ if __name__ == "__main__":
             error_comb1 = False
             error_comb2 = False
             
-        #Decision Error Nodo Combiner
-        state_map = input('Inducir un error al nodo reducer? S/N: ').upper()
+        #-> Inducir Error Nodo Reducer?
+        state_reducer = input('Inducir un error al nodo reducer? S/N: ').upper()
         
-        if state_map == 'S':
+        if state_reducer == 'S':
             #Elegir al azar el nodo a parar
-            map_random = random.randint(0, 1)
+            reduce_random = random.randint(0, nodes_reducer)
             
             #Bandera de parar nodo
-            if map_random==0:
-                print(f"El Error ocurrira en el hilo de grupo 1  \t")
+            if reduce_random==0:
+                print("El Error ocurrira en el hilo de grupo 1  \t")
                 error_red1 = True
                 error_red2 = False
             else:
-                print(f"El Error ocurrira en el hilo de grupo 2  \t")
+                print("El Error ocurrira en el hilo de grupo 2  \t")
                 error_red1 = False
                 error_red2 = True
 
@@ -310,8 +311,9 @@ if __name__ == "__main__":
             error_red2 = False
         
         
-        print(f"Inicio Paralelismo \t")
-        #Inicio Nodos Map
+        print("Inicio Paralelismo \t")
+
+        #Inicio Nodos 
         hilo_grupo1 = threading.Thread(target=ejecutar_hilos, args=(chunks_list[(int(chunks_list_size/2)):],error_map1,error_comb1,error_red1,"Parte1"))
         hilo_grupo2 = threading.Thread(target=ejecutar_hilos, args=(chunks_list[:(int(chunks_list_size/2))],error_map2,error_comb2,error_red2,"Parte2"))
         
@@ -327,13 +329,7 @@ if __name__ == "__main__":
         #Crear archivo final      
         merge_files("ficheros/reduced_chunks/reduced_chunks_Parte1.txt", "ficheros/reduced_chunks/reduced_chunks_Parte2.txt", "ficheros/final/TextoFinal.txt")
         
+        print("Finalizo con Exito  \t")
         
-
-        print(f"Finalizo con Exito  \t")
-        
-                
     else:
         print('ERROR! SE NECESITA EJECUTAR DE NUEVO EL PROGRAMA')
-
-
-

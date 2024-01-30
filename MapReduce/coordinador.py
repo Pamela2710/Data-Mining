@@ -124,6 +124,8 @@ if __name__ == "__main__":
         #lectura de archivos chunks dentro de la carpeta ficheros
         chunks_list = os.listdir("ficheros/chunks")
         chunks_list_size = len(chunks_list)
+        for f in os.listdir("ficheros/mapped_chunks"):
+            os.remove(os.path.join("ficheros/mapped_chunks", f))
         #print(f"Lista Chunks que entran en el Map -> {chunks_list} \t")
 
         

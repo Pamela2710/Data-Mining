@@ -23,12 +23,15 @@ def map_execution(List_map_chunks,list_chunk_name,lock,error):
         
         #Lectura del archivo chunk
         with open(f"ficheros/chunks/{chunk_name}", "r", encoding='utf-8') as reader:
-            words = reader.read().split(" ")
-            
-            #Escritura del mapeado del archivo chunk
-            for word in words:
-                with open(f"ficheros/mapped_chunks/mapped_{chunk_name}", "a+", encoding='utf-8') as writer:
-                    writer.write(f"<{word}, 1>\n")
+            with open(f"ficheros/mapped_chunks/mapped_{chunk_name}", "a+", encoding='utf-8') as writer:
+                line = reader.readline()
+                while line:
+                    if isinstance(line, str):
+                        words = line.strip().split(" ")
+                        for word in words:
+                            writer.write(f"<{word}, 1>\n")
+                    line = reader.readline()
+
         #Finaliza Proceso
         print(f"MAP Nodo {id} finalizo su proceso de: {chunk_name}")
 
